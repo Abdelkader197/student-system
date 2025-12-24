@@ -32,7 +32,7 @@ if "logged_in" not in st.session_state:
 
 # --- 3. تسجيل الدخول ---
 if not st.session_state.logged_in:
-    st.header("🔑 دخول النظام")
+    st.header("🔑 تسجيل الدخول")
     uid = st.text_input("أدخل الرقم القومي").strip()
     if st.button("دخول للنظام"):
         if uid == "000": 
@@ -156,4 +156,5 @@ else:
                                 'student_id': sid, 'student_name': data.get('أسم الطالب'),
                                 'subject': sub, 'details': det, 'date': datetime.datetime.now()
                             })
+
                             st.success("✅ تم الإرسال")
