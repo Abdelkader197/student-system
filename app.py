@@ -2,18 +2,17 @@ import streamlit as st
 from firebase_admin import credentials, initialize_app, firestore
 import firebase_admin
 
-# التحقق من عدم تهيئة التطبيق مسبقاً
+# الربط الذكي باستخدام Secrets
 if not firebase_admin._apps:
     try:
-        # قراءة المفتاح من قسم Secrets الذي ملأناه في الخطوة السابقة
+        # هنا نقرأ البيانات التي لصقتها أنت في المربع الأسود
         key_dict = st.secrets["firebase_secrets"]
         cred = credentials.Certificate(dict(key_dict))
         initialize_app(cred)
     except Exception as e:
-        st.error(f"خطأ في الاتصال بقاعدة البيانات: {e}")
+        st.error(f"حدث خطأ في الاتصال: {e}")
 
 db = firestore.client()
-
 # --- 1. إعداد الصفحة والتنسيق ---
 st.set_page_config(page_title="منظومة الطالب الذكية", layout="centered")
 
@@ -168,4 +167,5 @@ else:
                             })
 
                             st.success("✅ تم الإرسال")
+
 
