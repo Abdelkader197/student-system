@@ -3,9 +3,9 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 if not firebase_admin._apps:
-    # جلب البيانات وتحويلها لتنسيق يفهمه Firebase
-    firebase_dict = dict(st.secrets["firebase_secrets"])
-    cred = credentials.Certificate(firebase_dict)
+    # هنا الكود يذهب للمربع الأسود ويبحث عن العنوان [firebase_secrets]
+    firebase_info = dict(st.secrets["firebase_secrets"])
+    cred = credentials.Certificate(firebase_info)
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
@@ -163,6 +163,7 @@ else:
                             })
 
                             st.success("✅ تم الإرسال")
+
 
 
 
