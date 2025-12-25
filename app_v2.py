@@ -4,7 +4,7 @@ from firebase_admin import credentials, firestore
 import pandas as pd
 import datetime
 
-# --- 1. الاتصال بـ Firebase ---
+# --- 1. الاتصال بـ Firebase (من خلال Secrets) ---
 if not firebase_admin._apps:
     try:
         firebase_dict = dict(st.secrets["firebase_secrets"])
@@ -74,13 +74,25 @@ else:
             if complaints:
                 for comp in complaints:
                     c_data = comp.to_dict()
-                    with st.expander(f"✉️ {c_data.get('student_name')} - {c_data.get('subject')}"):
+                    with st.expander(f"✉️ {c_data.get('student_name', 'طالب')} - {c_data.get('subject', 'بدون موضوع')}"):
                         st.write(f"**التفاصيل:** {c_data.get('details')}")
                         st.write(f"**التاريخ:** {c_data.get('date')}")
                         if st.button("حذف الشكوى", key=comp.id):
                             db.collection('complaints').document(comp.id).delete()
                             st.rerun()
-            else: st.info("لا توجد شكاوى.")
+            else: st.info("لا توجد شكاوى حالياً.")
+        
+        elif admin_page == "تحديث بيانات الطلاب":
+            st.markdown("<div class='id-header'>رفع وتحديث بيانات الطلاب</div>", unsafe_allow_html=True)
+            uploaded_file = st.file_uploader("اختر ملف الإكسيل", type=['xlsx'])
+            if uploaded_file:
+                df = pd.read_excel(uploaded_file)
+                if st.button("🚀 رفع البيانات"):
+                    for _, row in df.iterrows():
+                        s_data = {str(k).strip(): v for k, v in row.to_dict().items() if pd.notnull(v)}
+                        n_id = str(s_data.get('الرقم القومي')).strip()
+                        if n_id: db.collection('students').document(n_id).set(s_data, merge=True)
+                    st.success("✅ تم الرفع بنجاح")
 
     else:
         with st.sidebar:
@@ -98,22 +110,45 @@ else:
             if page == "بيانات الطالب":
                 st.subheader(f"مرحباً بك: {data.get('أسم الطالب', '')}")
                 
-                def render_smart_field(label, key):
+                def render_field(label, key):
                     val = data.get(key)
                     if val and str(val).lower() not in ["nan", "none", "", "null"]:
                         st.markdown(f"<div class='data-card'><div class='field-key'>{label}</div><div class='field-val'>{val}</div></div>", unsafe_allow_html=True)
                     else:
                         st.warning(f"⚠️ بيان ناقص: {label}")
-                        new_input = st.text_input(f"يرجى إدخال {label}", key=f"in_{key}")
-                        if st.button(f"حفظ {label}", key=f"btn_{key}"):
-                            if new_input:
-                                doc_ref.update({key: new_input})
-                                st.success(f"✅ تم الحفظ")
+                        new_in = st.text_input(f"أدخل {label}", key=f"i_{key}")
+                        if st.button(f"حفظ {label}", key=f"b_{key}"):
+                            if new_in:
+                                doc_ref.update({key: new_in})
                                 st.rerun()
 
                 st.markdown("<div class='section-header'>👤 البيانات الشخصية</div>", unsafe_allow_html=True)
-                render_smart_field("أسم الطالب", "أسم الطالب")
-                render_smart_field("رقم التليفون", "رقم التليفون")
-                render_smart_field("العنوان", "العنوان")
+                render_field("أسم الطالب", "أسم الطالب")
+                render_field("رقم التليفون", "رقم التليفون")
+                render_field("العنوان", "العنوان")
 
-                st.markdown("<div class='section-header
+                st.markdown("<div class='section-header'>🎓 البيانات الأكاديمية</div>", unsafe_allow_html=True)
+                render_field("أسم البرنامج", "أسم البرنامج")
+                render_field("المستوى", "المستوى")
+
+            elif page == "مصروفات البرنامج":
+                st.markdown("<div class='section-header'>💰 الموقف المالي</div>", unsafe_allow_html=True)
+                must_pay = data.get('المصروفات المستحقة', '0')
+                st.warning(f"### المبلغ المطلوب سداده: {must_pay} ج.م")
+                
+                payments = data.get('payments', [])
+                if payments: st.table(pd.DataFrame(payments))
+                else: st.info("لا توجد سجلات سداد.")
+
+            elif page == "ارسال شكوى":
+                st.markdown("<div class='section-header'>📧 قسم الشكاوى</div>", unsafe_allow_html=True)
+                with st.form("c_f"):
+                    sub = st.text_input("الموضوع")
+                    det = st.text_area("التفاصيل")
+                    if st.form_submit_button("إرسال"):
+                        if sub and det:
+                            db.collection('complaints').add({
+                                'student_id': sid, 'student_name': data.get('أسم الطالب'),
+                                'subject': sub, 'details': det, 'date': datetime.datetime.now()
+                            })
+                            st.success("✅ تم الإرسال")
