@@ -1,17 +1,12 @@
 import streamlit as st
-from firebase_admin import credentials, initialize_app, firestore
 import firebase_admin
-import json
+from firebase_admin import credentials, firestore
 
-# الربط الذكي باستخدام Secrets لضمان عمل التطبيق أونلاين
 if not firebase_admin._apps:
-    try:
-        # قراءة البيانات التي لصقتها أنت في المربع الأسود (Secrets)
-        key_dict = st.secrets["firebase_secrets"]
-        cred = credentials.Certificate(dict(key_dict))
-        initialize_app(cred)
-    except Exception as e:
-        st.error(f"حدث خطأ في الاتصال بقاعدة البيانات: {e}")
+    # جلب البيانات وتحويلها لتنسيق يفهمه Firebase
+    firebase_dict = dict(st.secrets["firebase_secrets"])
+    cred = credentials.Certificate(firebase_dict)
+    firebase_admin.initialize_app(cred)
 
 db = firestore.client()
 # --- 1. إعداد الصفحة والتنسيق ---
@@ -168,6 +163,7 @@ else:
                             })
 
                             st.success("✅ تم الإرسال")
+
 
 
 
