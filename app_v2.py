@@ -2,15 +2,15 @@ import streamlit as st
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# منع تكرار الاتصال بالقاعدة
 if not firebase_admin._apps:
     try:
-        # قراءة البيانات من Secrets
-        fb_dict = dict(st.secrets["firebase_secrets"])
-        # السطر ده هو اللي بيحل مشكلة InvalidPadding اللي ظهرتلك
-        fb_dict["private_key"] = fb_dict["private_key"].replace("\\n", "\n")
+        # قراءة من السيكرتس
+        secrets_dict = dict(st.secrets["firebase_secrets"])
+        # إصلاح ذكي للفواصل عشان ما يحصلش InvalidPadding
+        if "\n" not in secrets_dict["private_key"]:
+            secrets_dict["private_key"] = secrets_dict["private_key"].replace("\\n", "\n")
         
-        cred = credentials.Certificate(fb_dict)
+        cred = credentials.Certificate(secrets_dict)
         firebase_admin.initialize_app(cred)
     except Exception as e:
         st.error(f"خطأ في الاتصال: {e}")
