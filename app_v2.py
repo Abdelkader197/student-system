@@ -123,7 +123,10 @@ else:
                                 st.rerun()
 
                 st.markdown("<div class='section-header'>👤 البيانات الشخصية</div>", unsafe_allow_html=True)
-                 render_field("الرقم القومى"و "الرقم القومى")
+                # عرض اسم الطالب من قاعدة البيانات
+                render_field("أسم الطالب", "أسم الطالب")
+                # عرض الرقم القومي (القيمة المستخدمة في الدخول sid)
+                st.markdown(f"<div class='data-card'><div class='field-key'>الرقم القومى</div><div class='field-val'>{sid}</div></div>", unsafe_allow_html=True)
                 render_field("رقم التليفون", "رقم التليفون")
                 render_field("العنوان", "العنوان")
 
