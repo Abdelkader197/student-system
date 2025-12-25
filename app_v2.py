@@ -1,13 +1,13 @@
 import streamlit as st
 import firebase_admin
 from firebase_admin import credentials, firestore
+import pandas as pd  # مكتبة معالجة البيانات
+import datetime      # مكتبة التاريخ والوقت
 
-# منع تكرار الاتصال
+# --- 1. الاتصال بـ Firebase (عن طريق Secrets) ---
 if not firebase_admin._apps:
     try:
-        # قراءة البيانات من Secrets وتحويلها لقاموس
         firebase_dict = dict(st.secrets["firebase_secrets"])
-        # معالجة المفتاح الخاص لضمان قراءة السطور الجديدة
         if "private_key" in firebase_dict:
             firebase_dict["private_key"] = firebase_dict["private_key"].replace("\\n", "\n")
             
@@ -17,7 +17,8 @@ if not firebase_admin._apps:
         st.error(f"حدث خطأ في الاتصال بقاعدة البيانات: {e}")
 
 db = firestore.client()
-# --- 1. إعداد الصفحة والتنسيق ---
+
+# --- 2. إعداد الصفحة والتنسيق الاحترافي الخاص بك ---
 st.set_page_config(page_title="منظومة الطالب الذكية", layout="centered")
 
 st.markdown("""
@@ -34,19 +35,13 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. الاتصال بـ Firebase ---
-if not firebase_admin._apps:
-    cred = credentials.Certificate("serviceAccountKey.json")
-    firebase_admin.initialize_app(cred)
-db = firestore.client()
-
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 # --- 3. تسجيل الدخول ---
 if not st.session_state.logged_in:
-    st.header("🔑 تسجيل الدخول")
-    uid = st.text_input("أدخل الرقم القومي").strip()
+    st.markdown("<div class='id-header'>🔒 بوابة تسجيل الدخول الموحدة</div>", unsafe_allow_html=True)
+    uid = st.text_input("أدخل الرقم القومي الخاص بك").strip()
     if st.button("دخول للنظام"):
         if uid == "000": 
             st.session_state.logged_in = True
@@ -58,9 +53,9 @@ if not st.session_state.logged_in:
                 st.session_state.logged_in = True
                 st.session_state.student_id = uid
                 st.rerun()
-            else: st.error("⚠️ الرقم القومي غير مسجل")
+            else: st.error("⚠️ الرقم القومي غير مسجل في المنظومة")
 
-# --- 4. لوحة التحكم ---
+# --- 4. لوحة التحكم (نظام الصفحات) ---
 else:
     sid = st.session_state.student_id
     doc_ref = db.collection('students').document(sid)
@@ -113,20 +108,18 @@ else:
                 st.session_state.logged_in = False
                 st.rerun()
 
-        data = doc_ref.get().to_dict()
-        if data:
+        data_doc = doc_ref.get()
+        if data_doc.exists:
+            data = data_doc.to_dict()
             if page == "بيانات الطالب":
-                st.markdown(f"<div class='id-header'>الرقم القومي: {sid}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='id-header'>مرحباً بك: {data.get('أسم الطالب', 'أيها الطالب')}</div>", unsafe_allow_html=True)
                 
                 def render_smart_field(label, key):
                     val = data.get(key)
                     is_empty = not val or str(val).lower() in ["nan", "none", "", "null"]
-                    
                     if not is_empty:
-                        # عرض البطاقة الزرقاء العادية
                         st.markdown(f"<div class='data-card'><div class='field-key'>{label}</div><div class='field-val'>{val}</div></div>", unsafe_allow_html=True)
                     else:
-                        # عرض خانة إدخال لاستكمال البيانات
                         st.warning(f"⚠️ بيان ناقص: {label}")
                         new_input = st.text_input(f"يرجى إدخال {label}", key=f"in_{key}")
                         if st.button(f"حفظ {label}", key=f"btn_{key}"):
@@ -136,7 +129,7 @@ else:
                                 st.rerun()
 
                 st.markdown("<div class='section-header'>👤 البيانات الشخصية</div>", unsafe_allow_html=True)
-                render_smart_field("اسم الطالب", "أسم الطالب")
+                render_smart_field("أسم الطالب", "أسم الطالب")
                 render_smart_field("تاريخ الميلاد", "تاريخ الميلاد")
                 render_smart_field("رقم التليفون", "رقم التليفون")
                 render_smart_field("العنوان", "العنوان")
@@ -150,31 +143,28 @@ else:
             elif page == "مصروفات البرنامج":
                 st.markdown("<div class='section-header'>💰 الموقف المالي</div>", unsafe_allow_html=True)
                 must_pay = data.get('المصروفات المستحقة') or data.get('مصروفات مستحقة') or "0"
-                st.warning(f"### المبلغ المستحق سداده: {must_pay} ج.م")
+                st.warning(f"### المبلغ المستحق سداده حالياً: {must_pay} ج.م")
                 
-                st.markdown("<div class='section-header'>📑 سجل عمليات السداد</div>", unsafe_allow_html=True)
+                st.markdown("<div class='section-header'>📑 سجل عمليات السداد السابقة</div>", unsafe_allow_html=True)
                 payments = data.get('payments', [])
                 if payments:
                     st.table(pd.DataFrame(payments))
-                else: st.info("لا توجد سجلات سداد.")
+                else: st.info("لا توجد سجلات سداد مسجلة حالياً.")
 
             elif page == "ارسال شكوى":
-                st.markdown("<div class='section-header'>📧 ارسال شكوى</div>", unsafe_allow_html=True)
+                st.markdown("<div class='section-header'>📧 قسم الشكاوى والطلبات</div>", unsafe_allow_html=True)
                 with st.form("c_form"):
-                    sub = st.text_input("الموضوع")
-                    det = st.text_area("التفاصيل")
-                    if st.form_submit_button("إرسال"):
+                    sub = st.text_input("موضوع الشكوى")
+                    det = st.text_area("تفاصيل الشكوى")
+                    if st.form_submit_button("إرسال الشكوى للإدارة"):
                         if sub and det:
                             db.collection('complaints').add({
-                                'student_id': sid, 'student_name': data.get('أسم الطالب'),
-                                'subject': sub, 'details': det, 'date': datetime.datetime.now()
+                                'student_id': sid, 
+                                'student_name': data.get('أسم الطالب'),
+                                'subject': sub, 
+                                'details': det, 
+                                'date': datetime.datetime.now()
                             })
-
-                            st.success("✅ تم الإرسال")
-
-
-
-
-
-
-
+                            st.success("✅ تم إرسال شكواك بنجاح وسيتم الرد عليها قريباً")
+                        else:
+                            st.error("⚠️ يرجى كتابة الموضوع والتفاصيل")
