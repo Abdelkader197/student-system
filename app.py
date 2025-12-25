@@ -1,8 +1,18 @@
 import streamlit as st
+from firebase_admin import credentials, initialize_app, firestore
 import firebase_admin
-from firebase_admin import credentials, firestore
-import pandas as pd
-import datetime
+
+# التحقق من عدم تهيئة التطبيق مسبقاً
+if not firebase_admin._apps:
+    try:
+        # قراءة المفتاح من قسم Secrets الذي ملأناه في الخطوة السابقة
+        key_dict = st.secrets["firebase_secrets"]
+        cred = credentials.Certificate(dict(key_dict))
+        initialize_app(cred)
+    except Exception as e:
+        st.error(f"خطأ في الاتصال بقاعدة البيانات: {e}")
+
+db = firestore.client()
 
 # --- 1. إعداد الصفحة والتنسيق ---
 st.set_page_config(page_title="منظومة الطالب الذكية", layout="centered")
@@ -158,3 +168,4 @@ else:
                             })
 
                             st.success("✅ تم الإرسال")
+
