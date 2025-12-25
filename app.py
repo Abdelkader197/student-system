@@ -2,11 +2,19 @@ import streamlit as st
 import firebase_admin
 from firebase_admin import credentials, firestore
 
+# منع تكرار الاتصال
 if not firebase_admin._apps:
-    # هنا الكود يذهب للمربع الأسود ويبحث عن العنوان [firebase_secrets]
-    firebase_info = dict(st.secrets["firebase_secrets"])
-    cred = credentials.Certificate(firebase_info)
-    firebase_admin.initialize_app(cred)
+    try:
+        # قراءة البيانات من Secrets وتحويلها لقاموس
+        firebase_dict = dict(st.secrets["firebase_secrets"])
+        # معالجة المفتاح الخاص لضمان قراءة السطور الجديدة
+        if "private_key" in firebase_dict:
+            firebase_dict["private_key"] = firebase_dict["private_key"].replace("\\n", "\n")
+            
+        cred = credentials.Certificate(firebase_dict)
+        firebase_admin.initialize_app(cred)
+    except Exception as e:
+        st.error(f"حدث خطأ في الاتصال بقاعدة البيانات: {e}")
 
 db = firestore.client()
 # --- 1. إعداد الصفحة والتنسيق ---
@@ -163,6 +171,7 @@ else:
                             })
 
                             st.success("✅ تم الإرسال")
+
 
 
 
